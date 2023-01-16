@@ -78,10 +78,12 @@ class GCSAutonomousBlocks(GCSforBlocks):
     # Adding layers of nodes (trellis diagram style)
 
     def add_everything(self, start_state: Point, target_state: Point) -> None:
+        # add start / target vertices
         self.add_vertex(start_state, "start")
         self.add_vertex(target_state, "target")
 
         ############################
+        # add vertices of sets in whcih start target are lcoated
         start_set_string = self.set_gen.construct_rels_representation_from_point(start_state.x())
         start_set = self.set_gen.rels2set[start_set_string]
         self.add_vertex(start_set, start_set_string)
@@ -94,47 +96,51 @@ class GCSAutonomousBlocks(GCSforBlocks):
 
         num_edges = 2
 
-        if self.opt.edge_gen == "all":
-            for rels in self.set_gen.rels2set:
-                self.add_vertex(self.set_gen.rels2set[rels], rels)
-                nbhd = self.set_gen.get_1_step_neighbours(rels)
+        # if self.opt.edge_gen == "all":
+        for rels in self.set_gen.rels2set:
+            self.add_vertex(self.set_gen.rels2set[rels], rels)
+            nbhd = self.set_gen.get_1_step_neighbours(rels)
 
-                for nbh in nbhd:
-                    self.add_vertex(self.set_gen.rels2set[nbh], nbh)
-                    self.connect_vertices(rels, nbh, EdgeOptAB.move_edge())
-                    num_edges += 1
+            for nbh in nbhd:
+                self.add_vertex(self.set_gen.rels2set[nbh], nbh)
+                self.connect_vertices(rels, nbh, EdgeOptAB.move_edge())
+                num_edges += 1
 
-        elif self.opt.edge_gen == "binary_tree_down":
-            already_added = set()
-            already_added.add(start_set_string)
-            frontier = set()
-            frontier.add(start_set_string)
-            next_frontier = set()
+        # elif self.opt.edge_gen == "binary_tree_down":
+        #     already_added = set()
+        #     already_added.add(start_set_string)
+        #     frontier = set()
+        #     frontier.add(start_set_string)
+        #     next_frontier = set()
 
-            while target_set_string not in already_added:
-                for f in frontier:
-                    # find neighbours of f
+        #     while target_set_string not in already_added:
+        #         for f in frontier:
+        #             # find neighbours of f
 
-                    nbhd = self.set_gen.get_useful_1_step_neighbours(f, target_set_string)
-                    for nbh in nbhd:
-                        # for each neighbour: if it's not in current / previous layers -- add it
-                        if nbh not in already_added:
-                            if nbh in self.set_gen.rels2set:
-                                self.add_vertex(self.set_gen.rels2set[nbh], nbh)
-                                self.connect_vertices(f, nbh, EdgeOptAB.move_edge())
-                                next_frontier.add(nbh)
-                                num_edges += 1
+        #             nbhd = self.set_gen.get_useful_1_step_neighbours(f, target_set_string)
+        #             for nbh in nbhd:
+        #                 # for each neighbour: if it's not in current / previous layers -- add it
+        #                 if nbh not in already_added:
+        #                     if nbh in self.set_gen.rels2set:
+        #                         self.add_vertex(self.set_gen.rels2set[nbh], nbh)
+        #                         self.connect_vertices(f, nbh, EdgeOptAB.move_edge())
+        #                         next_frontier.add(nbh)
+        #                         num_edges += 1
 
-                frontier = next_frontier.copy()
-                already_added = already_added.union(next_frontier)
-                next_frontier = set()
-        else:
-            raise Exception("Inapproprate edge gen: " + self.opt.edge_gen)
+        #         frontier = next_frontier.copy()
+        #         already_added = already_added.union(next_frontier)
+        #         next_frontier = set()
+        # else:
+        #     raise Exception("Inapproprate edge gen: " + self.opt.edge_gen)
 
         print("num edges is ", num_edges)
 
     ###################################################################################
     # Populating edges and vertices
+
+    def rel_name(self, rels):
+        assert type(rels) == list
+        return "D_" + "_".join([str(x) for x in rels])
 
     def add_edge(
         self,

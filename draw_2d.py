@@ -4,12 +4,12 @@ import typing as T
 import numpy as np
 import numpy.typing as npt
 
-from test import (
-    make_some_simple_transparent_tests,
-    make_simple_obstacle_swap_two,
-    make_simple_transparent_gcs_test,
-    make_simple_obstacle_swap_two_in_out,
-)
+# from test import (
+#     make_some_simple_transparent_tests,
+#     make_simple_obstacle_swap_two,
+#     make_simple_transparent_gcs_test,
+#     make_simple_obstacle_swap_two_in_out,
+# )
 
 try:
     from tkinter import Tk, Canvas, Toplevel
@@ -41,6 +41,7 @@ class Draw2DSolution:
         fast: bool = True,
         no_arm=False,
         no_padding=False,
+        draw_circles = False,
     ):
         self.no_arm = no_arm
         self.num_modes = num_modes
@@ -67,6 +68,7 @@ class Draw2DSolution:
         self.move_dt = 0.025  # s
 
         self.grasping = False
+        self.draw_circles = draw_circles
 
         self.width = self.cell_scaling * self.ub + self.padding * 2 + self.border * 2
         self.goal = goal
@@ -167,11 +169,15 @@ class Draw2DSolution:
     def draw_block(self, block_state, block_num):
         x, y = self.get_pixel_location(block_state)
         side = self.block_size / 2.0
-        # print(x)
-        # print(y)
-        # print(side)
+
+
+        if self.draw_circles:
+            draw_function = self.canvas.create_oval
+        else:
+            draw_function = self.canvas.create_rectangle
+
         self.cells[(x, y)] = [
-            self.canvas.create_rectangle(
+            draw_function(
                 x - side,
                 y - side,
                 x + side,
@@ -278,38 +284,38 @@ class Draw2DSolution:
                 self.draw_shadow(self.goal[2 * i : 2 * i + 2], i)
 
 
-if __name__ == "__main__":
-    gcs, ub, goal = make_simple_obstacle_swap_two()
-    # gcs, ub, goal = make_simple_obstacle_swap_two_in_out()
+# if __name__ == "__main__":
+#     gcs, ub, goal = make_simple_obstacle_swap_two()
+#     # gcs, ub, goal = make_simple_obstacle_swap_two_in_out()
 
-    # gcs, ub, goal = make_simple_transparent_gcs_test(2, 7, 18)
+#     # gcs, ub, goal = make_simple_transparent_gcs_test(2, 7, 18)
 
-    # gcs, ub, goal = make_simple_transparent_gcs_test(2,10,21, use_convex_relaxation=False, display_graph=False, max_rounded_paths=0, add_grasp_cost = False)
+#     # gcs, ub, goal = make_simple_transparent_gcs_test(2,10,21, use_convex_relaxation=False, display_graph=False, max_rounded_paths=0, add_grasp_cost = False)
 
-    # nb = 2
-    # h = 7
-    # seed = 5
-    # gcs, ub, goal = make_simple_transparent_gcs_test(
-    #     2,
-    #     nb,
-    #     h,
-    #     use_convex_relaxation=False,
-    #     display_graph=False,
-    #     max_rounded_paths=0,
-    #     add_grasp_cost=False,
-    #     randomize=False,
-    #     seed=seed,
-    # )
+#     # nb = 2
+#     # h = 7
+#     # seed = 5
+#     # gcs, ub, goal = make_simple_transparent_gcs_test(
+#     #     2,
+#     #     nb,
+#     #     h,
+#     #     use_convex_relaxation=False,
+#     #     display_graph=False,
+#     #     max_rounded_paths=0,
+#     #     add_grasp_cost=False,
+#     #     randomize=False,
+#     #     seed=seed,
+#     # )
 
-    assert gcs.solution.is_success(), "Solution was not found"
-    modes, vertices = gcs.get_solution_path()
-    for i in range(len(vertices)):
-        vertices[i] = ["%.1f" % v for v in vertices[i]]
+#     assert gcs.solution.is_success(), "Solution was not found"
+#     modes, vertices = gcs.get_solution_path()
+#     for i in range(len(vertices)):
+#         vertices[i] = ["%.1f" % v for v in vertices[i]]
 
-    print(modes)
-    print(vertices)
+#     print(modes)
+#     print(vertices)
 
-    drawer = Draw2DSolution(gcs.opt.num_modes, ub, modes, vertices, goal, fast=False)  # type: ignore
-    drawer.draw_solution()
+#     drawer = Draw2DSolution(gcs.opt.num_modes, ub, modes, vertices, goal, fast=False)  # type: ignore
+#     drawer.draw_solution()
 
-    # make_some_simple_transparent_tests()
+#     # make_some_simple_transparent_tests()

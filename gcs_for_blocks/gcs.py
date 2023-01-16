@@ -233,17 +233,9 @@ class GCSforBlocks:
         """
         Define a vertex with a convex set.
         """
-        # print(self.name_to_vertex.keys())
-        # print(name)
         if name not in self.name_to_vertex:
-            # print("adding " + name)
             vertex = self.gcs.AddVertex(convex_set, name)
             self.name_to_vertex[name] = vertex
-            # if not convex_set.IsBounded():
-            #     WARN("Convex set for", name, "is not bounded!")
-            # return vertex
-        # else:
-        #     return self.name_to_vertex[name]
 
     def connect_vertices(
         self, left_vertex_name: str, right_vertex_name: str, edge_opt: EdgeOptions

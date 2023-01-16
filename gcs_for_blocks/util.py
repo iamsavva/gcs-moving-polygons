@@ -32,7 +32,7 @@ def all_possible_combinations_of_items(item_set: T.List, num_items: int):
     result = []
     possible_n_1 = all_possible_combinations_of_items(item_set, num_items - 1)
     for item in item_set:
-        result += [item + x for x in possible_n_1]
+        result += [[item] + x for x in possible_n_1]
     return result
 
 

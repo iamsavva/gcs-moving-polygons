@@ -30,6 +30,10 @@ class SetTesselation:
         self.rels2set = dict()  # T.Dict[str, HPolyhedron]
         self.generate_sets()
 
+    def rel_name(self, rels):
+        assert type(rels) == list
+        return "D_" + "_".join([str(x) for x in rels])
+
     def get_sets_in_rels_representation(self):
         # all possible combinations of relations are teh possible sets
         return all_possible_combinations_of_items(self.opt.rels, self.opt.rels_len)
@@ -45,73 +49,43 @@ class SetTesselation:
             # set_for_rels_rep = set_for_rels_rep.ReduceInequalities()
 
             # check that it's non-empty
-            solved, x, r = ChebyshevCenter(set_for_rels_rep)
+            solved, _, r = ChebyshevCenter(set_for_rels_rep)
             if solved and r >= 0.00001:
-                self.rels2set[rels_rep] = set_for_rels_rep
+                self.rels2set[self.rel_name(rels_rep)] = set_for_rels_rep
 
     def get_set_for_rels(self, rels: T.List[int]) -> HPolyhedron:
         A, b = self.get_bounding_box_constraint()
         for relation_index, relation in enumerate(rels):
-            if relation != "X":
-                i, j = self.index2relation[relation_index]
-                A_relation, b_relation = self.get_constraints_for_relation(relation, i, j)
-                A = np.vstack((A, A_relation))
-                b = np.hstack((b, b_relation))
+            i, j = self.index2relation[relation_index]
+            A_relation, b_relation = self.get_constraints_for_relation(relation, i, j)
+            A = np.vstack((A, A_relation))
+            b = np.hstack((b, b_relation))
         return HPolyhedron(A, b)
 
-    def get_constraints_for_relation(self, relation: str, i: int, j: int):
-        if self.opt.symmetric_set_def:
-            return self.get_constraints_for_relation_sym(relation, i, j)
-        else:
-            return self.get_constraints_for_relation_asym(relation, i, j)
+    def get_constraints_for_relation(self, relation: int, i: int, j: int):
+        return self.get_constraints_for_relation(relation, i, j)
 
-    def get_constraints_for_relation_asym(self, relation: str, i, j):
-        w = self.opt.block_width
-        bd = self.opt.block_dim
-        A = np.zeros((2, self.opt.state_dim))
-        if relation == "A":
-            A[0, j * bd], A[0, i * bd] = 1, -1
-            A[1, j * bd + 1], A[1, i * bd + 1] = 1, -1
-            b = np.array([w, -w])
-        elif relation == "B":
-            A[0, i * bd], A[0, j * bd] = 1, -1
-            A[1, i * bd + 1], A[1, j * bd + 1] = 1, -1
-            b = np.array([w, -w])
-        elif relation == "L":
-            A[0, i * bd], A[0, j * bd] = 1, -1
-            A[1, j * bd + 1], A[1, i * bd + 1] = 1, -1
-            b = np.array([-w, w])
-        elif relation == "R":
-            A[0, j * bd], A[0, i * bd] = 1, -1
-            A[1, i * bd + 1], A[1, j * bd + 1] = 1, -1
-            b = np.array([-w, w])
-        return A, b
-
-    def get_constraints_for_relation_sym(self, relation: str, i, j):
-        w = self.opt.block_width
+    def get_constraints_for_relation(self, relation: int, i, j):
+        """
+        3 half planes that define that object j is in direction-relation relative to object i
+        """
+        r = self.opt.block_radius
         bd = self.opt.block_dim
         sd = self.opt.state_dim
         xi, yi = i * bd, i * bd + 1
         xj, yj = j * bd, j * bd + 1
+        theta = 2*np.pi / self.opt.num_sides
+
         a0, a1, a2 = np.zeros(sd), np.zeros(sd), np.zeros(sd)
-        if relation == "L":
-            a0[xi], a0[yi], a0[xj], a0[yj] = 1, -1, -1, 1
-            a1[xi], a1[yi], a1[xj], a1[yj] = 1, 1, -1, -1
-            a2[xi], a2[yi], a2[xj], a2[yj] = 1, 0, -1, 0
-        elif relation == "A":
-            a0[xi], a0[yi], a0[xj], a0[yj] = 1, -1, -1, 1
-            a1[xi], a1[yi], a1[xj], a1[yj] = -1, -1, 1, 1
-            a2[xi], a2[yi], a2[xj], a2[yj] = 0, -1, 0, 1
-        elif relation == "R":
-            a0[xi], a0[yi], a0[xj], a0[yj] = -1, 1, 1, -1
-            a1[xi], a1[yi], a1[xj], a1[yj] = -1, -1, 1, 1
-            a2[xi], a2[yi], a2[xj], a2[yj] = -1, 0, 1, 0
-        elif relation == "B":
-            a0[xi], a0[yi], a0[xj], a0[yj] = -1, 1, 1, -1
-            a1[xi], a1[yi], a1[xj], a1[yj] = 1, 1, -1, -1
-            a2[xi], a2[yi], a2[xj], a2[yj] = 0, 1, 0, -1
+        k = relation
+        angle = theta*(k+1)
+        a0[xi], a0[yi], a0[xj], a0[yj] = np.sin(angle), -np.cos(angle), -np.sin(angle), np.cos(angle)
+        angle = theta*(k)
+        a1[xi], a1[yi], a1[xj], a1[yj] = -np.sin(angle), np.cos(angle), np.sin(angle), -np.cos(angle)
+        angle = theta*(k+0.5)
+        a2[xi], a2[yi], a2[xj], a2[yj] = np.cos(angle), np.sin(angle), -np.cos(angle), -np.sin(angle)
         A = np.vstack((a0, a1, a2))
-        b = np.array([0, 0, -w])
+        b = np.array([0, 0, -r])
         return A, b
 
     def get_bounding_box_constraint(self) -> T.Tuple[npt.NDArray, npt.NDArray]:
@@ -141,61 +115,56 @@ class SetTesselation:
                 st[1] = st[0] + 1
         assert st == [self.opt.num_blocks - 1, self.opt.num_blocks], "checking my math"
 
-    def construct_rels_representation_from_point(self, point: npt.NDArray, expansion=None) -> str:
+    def construct_rels_representation_from_point(self, point: npt.NDArray) -> T.List[int]:
         """
-        Given a point, find a string of relations for it
+        Given a point, find a list of relations for it
         """
-        if expansion == None:
-            expansion = "Y" * self.opt.rels_len
-
-        rels_representation = ""
+        rels_representation = []
         for index in range(self.opt.rels_len):
-            # if expansion is an X -- don't do anything
-            if expansion[index] == "X":
-                rels_representation += "X"
-                continue
             i, j = self.index2relation[index]
             for relation in self.opt.rels:
                 A, b = self.get_constraints_for_relation(relation, i, j)
                 if np.all(A.dot(point) <= b):
-                    rels_representation += relation
+                    rels_representation += [relation]
                     break
         # check yourself -- should have n*(n-1)/2 letters in the representation
         assert len(rels_representation) == self.opt.rels_len
-        return rels_representation
+        return self.rel_name(rels_representation)
 
-    def get_1_step_neighbours(self, rels: str):
+    def get_1_step_neighbours(self, rels_string: str):
         """
         Get all 1 step neighbours
         1-step -- change of a single relation
         """
-        assert len(rels) == self.opt.rels_len, "inappropriate relation: " + rels
+        rels = [int(x) for x in rels_string[2:].split("_")]
+        
         lrels = list(rels)
         nbhd = []
         for i in range(len(rels)):
-            for j in range(self.opt.number_of_relations - 1):
-                lrels[i] = self.opt.rel_iter(lrels[i])
-                if self.opt.rel_inv(rels[i]) != lrels[i] and "".join(lrels) in self.rels2set:
-                    nbhd += ["".join(lrels)]
-            lrels[i] = self.opt.rel_iter(lrels[i])
+            other_rel = rels
+            nbh_rels_for_i = self.opt.rel_nbhd(rels[i])
+            for nbh_rel in nbh_rels_for_i:
+                other_rel[i] = nbh_rel
+                if self.rel_name(other_rel) in self.rels2set:
+                    nbhd += [self.rel_name(other_rel)]
         return nbhd
 
-    def get_useful_1_step_neighbours(self, rels: str, target: str):
-        """
-        Get 1-stop neighbours that are relevant given the target node
-        1-step -- change in a single relation
-        relevant to target -- if relation in relation is already same as in target, don't change it
-        """
-        assert len(rels) == self.opt.rels_len, "Wrong num of relations: " + rels
-        assert len(target) == self.opt.rels_len, "Wrong num of relations in target: " + target
+    # def get_useful_1_step_neighbours(self, rels: str, target: str):
+    #     """
+    #     Get 1-stop neighbours that are relevant given the target node
+    #     1-step -- change in a single relation
+    #     relevant to target -- if relation in relation is already same as in target, don't change it
+    #     """
+    #     assert len(rels) == self.opt.rels_len, "Wrong num of relations: " + rels
+    #     assert len(target) == self.opt.rels_len, "Wrong num of relations in target: " + target
 
-        nbhd = []
-        for i in range(len(rels)):
-            if rels[i] == target[i]:
-                continue
-            elif target[i] in self.opt.rel_nbhd[rels[i]]:
-                nbhd += [rels[:i] + target[i] + rels[i + 1 :]]
-            else:
-                for let in self.opt.rel_nbhd[rels[i]]:
-                    nbhd += [rels[:i] + let + rels[i + 1 :]]
-        return nbhd
+    #     nbhd = []
+    #     for i in range(len(rels)):
+    #         if rels[i] == target[i]:
+    #             continue
+    #         elif target[i] in self.opt.rel_nbhd[rels[i]]:
+    #             nbhd += [rels[:i] + target[i] + rels[i + 1 :]]
+    #         else:
+    #             for let in self.opt.rel_nbhd[rels[i]]:
+    #                 nbhd += [rels[:i] + let + rels[i + 1 :]]
+    #     return nbhd

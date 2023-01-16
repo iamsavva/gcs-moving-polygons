@@ -1,8 +1,8 @@
 from gcs_for_blocks.set_tesselation_2d import SetTesselation
 from gcs_for_blocks.gcs_options import GCSforAutonomousBlocksOptions
 from gcs_for_blocks.gcs_auto_blocks import GCSAutonomousBlocks
-from gcs_for_blocks.util import timeit, INFO
-from gcs_for_blocks.hierarchical_gcs_ab import HierarchicalGraph, HierarchicalGCSAB
+from gcs_for_blocks.util import timeit, INFO, all_possible_combinations_of_items
+# from gcs_for_blocks.hierarchical_gcs_ab import HierarchicalGraph, HierarchicalGCSAB
 
 import numpy as np
 
@@ -17,6 +17,7 @@ from draw_2d import Draw2DSolution
 
 
 if __name__ == "__main__":
+
     # tricky case to screw up solution optimality
     # nb = 2
     # ubf = 4.0
@@ -45,14 +46,13 @@ if __name__ == "__main__":
     # start_point = Point(np.array([1,1, 1,2, 1,3, 1,4]))
     # target_point = Point(np.array([3,4, 3,3, 3,2, 3,1]))
 
-    options = GCSforAutonomousBlocksOptions(nb, ubf=ubf)
+    options = GCSforAutonomousBlocksOptions(num_blocks = nb, num_sides = 10, ubf=ubf)
     options.use_convex_relaxation = False
     options.max_rounded_paths = 30
-    options.problem_complexity = "collision-free-all-moving"
-    options.edge_gen = "binary_tree_down"  # binary_tree_down
-    options.symmetric_set_def = True
-    options.rounding_seed = 1
-    options.custom_rounding_paths = 0
+    # options.problem_complexity = "collision-free-all-moving"
+    # options.edge_gen = "binary_tree_down"  # binary_tree_down
+    # options.rounding_seed = 1
+    # options.custom_rounding_paths = 0
 
     x = timeit()
     gcs = GCSAutonomousBlocks(options)
@@ -73,5 +73,5 @@ if __name__ == "__main__":
     # print(modes)
     # print(vertices)
 
-    drawer = Draw2DSolution(nb, np.array([ubf,ubf]), modes, vertices, target_point.x(), fast = False, no_arm = True)
+    drawer = Draw2DSolution(nb, np.array([ubf,ubf]), modes, vertices, target_point.x(), fast = False, no_arm = True, draw_circles=True)
     drawer.draw_solution_no_arm()
