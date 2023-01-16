@@ -65,7 +65,8 @@ class Draw2DSolution:
             self.speed = 1  # units/s
             self.grasp_dt = 0.5  # s
 
-        self.move_dt = 0.025  # s
+        self.move_dt = 0.033  # s
+        
 
         self.grasping = False
         self.draw_circles = draw_circles

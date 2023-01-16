@@ -85,53 +85,52 @@ class GCSAutonomousBlocks(GCSforBlocks):
         ############################
         # add vertices of sets in whcih start target are lcoated
         start_set_string = self.set_gen.construct_rels_representation_from_point(start_state.x())
-        start_set = self.set_gen.rels2set[start_set_string]
+        start_set = self.set_gen.rels2set(start_set_string)
         self.add_vertex(start_set, start_set_string)
         self.connect_vertices("start", start_set_string, EdgeOptAB.equality_edge())
 
         target_set_string = self.set_gen.construct_rels_representation_from_point(target_state.x())
-        target_set = self.set_gen.rels2set[target_set_string]
+        target_set = self.set_gen.rels2set(target_set_string)
         self.add_vertex(target_set, target_set_string)
         self.connect_vertices(target_set_string, "target", EdgeOptAB.target_edge())
 
         num_edges = 2
 
-        # if self.opt.edge_gen == "all":
-        for rels in self.set_gen.rels2set:
-            self.add_vertex(self.set_gen.rels2set[rels], rels)
-            nbhd = self.set_gen.get_1_step_neighbours(rels)
+        if self.opt.edge_gen == "all":
+            for rels in self.set_gen.sets_in_rels_representation():
+                self.add_vertex(self.set_gen.rels2set(rels), rels)
+                nbhd = self.set_gen.get_1_step_neighbours(rels)
 
-            for nbh in nbhd:
-                self.add_vertex(self.set_gen.rels2set[nbh], nbh)
-                self.connect_vertices(rels, nbh, EdgeOptAB.move_edge())
-                num_edges += 1
+                for nbh in nbhd:
+                    self.add_vertex(self.set_gen.rels2set(nbh), nbh)
+                    self.connect_vertices(rels, nbh, EdgeOptAB.move_edge())
+                    num_edges += 1
 
-        # elif self.opt.edge_gen == "binary_tree_down":
-        #     already_added = set()
-        #     already_added.add(start_set_string)
-        #     frontier = set()
-        #     frontier.add(start_set_string)
-        #     next_frontier = set()
+        elif self.opt.edge_gen == "binary_tree_down":
+            already_added = set()
+            already_added.add(start_set_string)
+            frontier = set()
+            frontier.add(start_set_string)
+            next_frontier = set()
 
-        #     while target_set_string not in already_added:
-        #         for f in frontier:
-        #             # find neighbours of f
+            while target_set_string not in already_added:
+                for f in frontier:
+                    # find neighbours of f
+                    nbhd = self.set_gen.get_useful_1_step_neighbours(f, target_set_string)
+                    for nbh in nbhd:
+                        # for each neighbour: if it's not in current / previous layers -- add it
+                        if nbh not in already_added:
+                            # if nbh in self.set_gen.rels2set:
+                            self.add_vertex(self.set_gen.rels2set(nbh), nbh)
+                            self.connect_vertices(f, nbh, EdgeOptAB.move_edge())
+                            next_frontier.add(nbh)
+                            num_edges += 1
 
-        #             nbhd = self.set_gen.get_useful_1_step_neighbours(f, target_set_string)
-        #             for nbh in nbhd:
-        #                 # for each neighbour: if it's not in current / previous layers -- add it
-        #                 if nbh not in already_added:
-        #                     if nbh in self.set_gen.rels2set:
-        #                         self.add_vertex(self.set_gen.rels2set[nbh], nbh)
-        #                         self.connect_vertices(f, nbh, EdgeOptAB.move_edge())
-        #                         next_frontier.add(nbh)
-        #                         num_edges += 1
-
-        #         frontier = next_frontier.copy()
-        #         already_added = already_added.union(next_frontier)
-        #         next_frontier = set()
-        # else:
-        #     raise Exception("Inapproprate edge gen: " + self.opt.edge_gen)
+                frontier = next_frontier.copy()
+                already_added = already_added.union(next_frontier)
+                next_frontier = set()
+        else:
+            raise Exception("Inapproprate edge gen: " + self.opt.edge_gen)
 
         print("num edges is ", num_edges)
 
@@ -160,7 +159,7 @@ class GCSAutonomousBlocks(GCSforBlocks):
         # Adding constraints
         # -----------------------------------------------------------------
         if edge_opt.add_set_transition_constraint:
-            left_set = self.set_gen.rels2set[left_vertex.name()]
+            left_set = self.set_gen.rels2set(left_vertex.name())
             self.add_common_set_at_transition_constraint(left_set, edge)
         if edge_opt.add_equality_constraint:
             self.add_point_equality_constraint(edge)
@@ -169,8 +168,8 @@ class GCSAutonomousBlocks(GCSforBlocks):
         # -----------------------------------------------------------------
         # add movement cost on the edge
         if edge_opt.add_each_block_movement_cost:
-            self.add_each_block_movement_cost(edge)
-            # self.add_full_movement_cost(edge)
+            # self.add_each_block_movement_cost(edge)
+            self.add_full_movement_cost(edge)
 
     ###################################################################################
     # Adding constraints and cost terms

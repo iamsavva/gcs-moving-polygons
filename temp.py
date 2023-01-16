@@ -17,21 +17,27 @@ from draw_2d import Draw2DSolution
 
 
 if __name__ == "__main__":
+    # nb = 2
+    # ubf = 2.0
+    # start_point = Point( np.array([0,0, 2,2]))
+    # target_point = Point(np.array([2,2, 0,0]))
+
     nb = 2
     ubf = 2.0
-    start_point = Point( np.array([0,0, 2,2]))
-    target_point = Point(np.array([2,2, 0,0]))
+    start_point = Point( np.array([0.5,0.5, 1.5,1.5]))
+    target_point = Point(np.array([1.5,1.5, 0.5,0.5]))
+
 
     # nb = 2
     # ubf = 2.0
-    # start_point = Point( np.array([0.5,0.5, 1.5,1.5]))
+    # start_point = Point( np.array([0.2,0.6, 1.5,1.5]))
     # target_point = Point(np.array([1.5,1.5, 0.5,0.5]))
 
 
-    # nb = 3
-    # ubf = 4.0
-    # start_point = Point(np.array([1, 1, 1, 2, 1, 3]))
-    # target_point = Point(np.array([3, 3, 3, 1, 3, 2]))
+    nb = 3
+    ubf = 4.0
+    start_point = Point( np.array([1.49,1, 2.51,1, 2,3]))
+    target_point = Point(np.array([1.49,3, 2.51,3, 2,1]))
 
     # # # 5.31 5.27
 
@@ -40,18 +46,23 @@ if __name__ == "__main__":
     # start_point = Point(np.array([1,1, 1,2, 1,3, 1,4]))
     # target_point = Point(np.array([3,4, 3,3, 3,2, 3,1]))
 
-    options = GCSforAutonomousBlocksOptions(num_blocks = nb, num_sides = 50, ubf=ubf)
+    options = GCSforAutonomousBlocksOptions(num_blocks = nb, num_sides = 30, ubf=ubf)
     options.use_convex_relaxation = False
     options.max_rounded_paths = 30
     options.problem_complexity = "collision-free-all-moving"
-    # options.edge_gen = "binary_tree_down"  # binary_tree_down
+    options.edge_gen = "binary_tree_down"  # binary_tree_down
+    options.lazy_set_construction = True
     # options.rounding_seed = 1
     # options.custom_rounding_paths = 0
 
     x = timeit()
     gcs = GCSAutonomousBlocks(options)
     gcs.build_the_graph_simple(start_point, target_point)
-    gcs.opt.num_gcs_sets = len(gcs.set_gen.rels2set)
+    # gcs.opt.num_gcs_sets = len(gcs.set_gen.rels2set)
+
+    # print(gcs.set_gen.get_useful_1_step_neighbours("D_0", "D_6"))
+
+
     gcs.solve(show_graph=False, verbose=True)
 
     modes, vertices = gcs.get_solution_path()

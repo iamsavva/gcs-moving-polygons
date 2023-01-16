@@ -27,31 +27,41 @@ class SetTesselation:
         self.index2relation = dict()  # T.Dict[int, (int,int)]
         self.make_index_to_block_relation()
 
-        self.rels2set = dict()  # T.Dict[str, HPolyhedron]
+        self.rels2set_dict = dict()  # T.Dict[str, HPolyhedron]
         self.generate_sets()
+
+    def rels2set(self, rel_string:str):
+        if self.opt.lazy_set_construction:
+            return self.get_set_for_rels( self.string_to_rel(rel_string) )
+        else:
+            return self.rels2set_dict[rel_string]
 
     def rel_name(self, rels):
         assert type(rels) == list
         return "D_" + "_".join([str(x) for x in rels])
+
+    def string_to_rel(self, rel_string):
+        return [int(x) for x in rel_string[2:].split("_")]
 
     def get_sets_in_rels_representation(self):
         # all possible combinations of relations are teh possible sets
         return all_possible_combinations_of_items(self.opt.rels, self.opt.rels_len)
 
     def generate_sets(self):
-        num_sets = len(self.sets_in_rels_representation)
-        for i in tqdm(range(num_sets), "Set generation"):
-            rels_rep = self.sets_in_rels_representation[i]
-            # get set
-            set_for_rels_rep = self.get_set_for_rels(rels_rep)
-            # DO NOT reduce iequalities, some of these sets are empty
-            # reducing inequalities is also extremely time consuming
-            # set_for_rels_rep = set_for_rels_rep.ReduceInequalities()
+        if not self.opt.lazy_set_construction:
+            num_sets = len(self.sets_in_rels_representation)
+            for i in tqdm(range(num_sets), "Set generation"):
+                rels_rep = self.sets_in_rels_representation[i]
+                # get set
+                set_for_rels_rep = self.get_set_for_rels(rels_rep)
+                # DO NOT reduce iequalities, some of these sets are empty
+                # reducing inequalities is also extremely time consuming
+                # set_for_rels_rep = set_for_rels_rep.ReduceInequalities()
 
-            # check that it's non-empty
-            solved, _, r = ChebyshevCenter(set_for_rels_rep)
-            if solved and r >= 0.00001:
-                self.rels2set[self.rel_name(rels_rep)] = set_for_rels_rep
+                # check that it's non-empty
+                solved, _, r = ChebyshevCenter(set_for_rels_rep)
+                if solved and r >= 0.00001:
+                    self.rels2set_dict[self.rel_name(rels_rep)] = set_for_rels_rep
 
     def get_set_for_rels(self, rels: T.List[int]) -> HPolyhedron:
         A, b = self.get_bounding_box_constraint()
@@ -136,35 +146,42 @@ class SetTesselation:
         Get all 1 step neighbours
         1-step -- change of a single relation
         """
-        rels = [int(x) for x in rels_string[2:].split("_")]
+        rels = self.string_to_rel(rels_string)
         
-        lrels = list(rels)
         nbhd = []
-        for i in range(len(rels)):
+        for i, rel in enumerate(rels):
             other_rel = rels
-            nbh_rels_for_i = self.opt.rel_nbhd(rels[i])
+            nbh_rels_for_i = self.opt.rel_nbhd(rel)
             for nbh_rel in nbh_rels_for_i:
                 other_rel[i] = nbh_rel
-                if self.rel_name(other_rel) in self.rels2set:
+                if self.opt.lazy_set_construction or self.rel_name(other_rel) in self.rels2set_dict:
                     nbhd += [self.rel_name(other_rel)]
         return nbhd
 
-    # def get_useful_1_step_neighbours(self, rels: str, target: str):
-    #     """
-    #     Get 1-stop neighbours that are relevant given the target node
-    #     1-step -- change in a single relation
-    #     relevant to target -- if relation in relation is already same as in target, don't change it
-    #     """
-    #     assert len(rels) == self.opt.rels_len, "Wrong num of relations: " + rels
-    #     assert len(target) == self.opt.rels_len, "Wrong num of relations in target: " + target
+    def get_useful_1_step_neighbours(self, rels_string: str, target_string: str):
+        """
+        Get 1-stop neighbours that are relevant given the target node
+        1-step -- change in a single relation
+        relevant to target -- if relation in relation is already same as in target, don't change it
+        """
+        rels = self.string_to_rel(rels_string)
+        target = self.string_to_rel(target_string)
+        assert len(rels) == self.opt.rels_len, "Wrong num of relations: " + rels
+        assert len(target) == self.opt.rels_len, "Wrong num of relations in target: " + target
 
-    #     nbhd = []
-    #     for i in range(len(rels)):
-    #         if rels[i] == target[i]:
-    #             continue
-    #         elif target[i] in self.opt.rel_nbhd[rels[i]]:
-    #             nbhd += [rels[:i] + target[i] + rels[i + 1 :]]
-    #         else:
-    #             for let in self.opt.rel_nbhd[rels[i]]:
-    #                 nbhd += [rels[:i] + let + rels[i + 1 :]]
-    #     return nbhd
+        nbhd = []
+        for i, rel in enumerate(rels):
+            # same -- don't do anything
+            if rel == target[i]:
+                continue
+
+            up_dist = (target[i] - rels[i]) % self.opt.number_of_relations
+            down_dist = (rels[i] - target[i]) % self.opt.number_of_relations
+            if up_dist == down_dist:
+                for let in self.opt.rel_nbhd(rel):
+                    nbhd += [ self.rel_name(rels[:i] + [let] + rels[i + 1 :]) ]
+            elif up_dist < down_dist:
+                nbhd += [ self.rel_name(rels[:i] + [(rel+1)%self.opt.number_of_relations] + rels[i + 1 :]) ]
+            else:
+                nbhd += [ self.rel_name(rels[:i] + [(rel-1)%self.opt.number_of_relations] + rels[i + 1 :]) ]
+        return nbhd

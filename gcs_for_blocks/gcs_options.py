@@ -241,6 +241,7 @@ class GCSforAutonomousBlocksOptions(GCSforBlocksOptions):
         self,
         num_blocks: int,
         num_sides: int,
+        lazy_set_construction: bool = True,
         block_radius: float = 1.0,
         max_rounded_paths: int = 40,
         use_convex_relaxation: bool = True,
@@ -255,6 +256,8 @@ class GCSforAutonomousBlocksOptions(GCSforBlocksOptions):
         self.block_radius = block_radius
         self.max_rounded_paths = max_rounded_paths
         self.use_convex_relaxation = use_convex_relaxation
+        self.lazy_set_construction = lazy_set_construction
+
         self.num_gcs_sets = -1 # uninitialized yet
 
         # other blocks are located in relation to the current block: left / right / above.
