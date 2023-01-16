@@ -62,7 +62,7 @@ class Draw2DSolution:
             self.speed = 8  # units/s
             self.grasp_dt = 0.3  # s
         else:
-            self.speed = 3  # units/s
+            self.speed = 1  # units/s
             self.grasp_dt = 0.5  # s
 
         self.move_dt = 0.025  # s
@@ -213,7 +213,7 @@ class Draw2DSolution:
     def draw_shadow(self, state, name):
         x, y = self.get_pixel_location(state)
         side = self.block_size / 2.0
-        if name == "arm":
+        if name == "arm" or self.draw_circles:
             create_func = self.canvas.create_oval
         else:
             create_func = self.canvas.create_rectangle

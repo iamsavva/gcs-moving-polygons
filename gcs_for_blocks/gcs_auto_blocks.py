@@ -216,6 +216,8 @@ class GCSAutonomousBlocks(GCSforBlocks):
     def get_edge_name(self, left_vertex_name: str, right_vertex_name: str) -> str:
         return left_vertex_name + "_" + right_vertex_name
 
+        
+
     ###################################################################################
     # Solve and display solution
 
